@@ -15,7 +15,7 @@ SOURCE_PATH	:= $(shell pwd)
 LIBRE_PATH	:= $(SOURCE_PATH)/re
 LIBREM_PATH	:= $(SOURCE_PATH)/rem
 BARESIP_PATH	:= $(SOURCE_PATH)/baresip
-
+OPENSSL_PATH    := $(SOURCE_PATH)/openssl
 
 #
 # tools and SDK
@@ -138,14 +138,116 @@ $(CONTRIB_FAT) $(CONTRIB_FAT)/lib:
 	@mkdir -p $@
 
 
+
+#
+# openssl
+#
+
+OPENSSL_FLAGS := \
+	threads \
+	-isystem$(SYSROOT_INC)/usr/include \
+	-isystem$(SYSROOT_INC)/usr/include/$(TRIPLE) \
+	-fPIE -fPIC \
+	no-async \
+	no-bf \
+	no-blake2 \
+	no-camellia \
+	no-capieng \
+	no-cast \
+	no-comp \
+	no-dso \
+	no-engine \
+	no-gost \
+	no-heartbeats \
+	no-idea \
+	no-md2 \
+	no-md4 \
+	no-mdc2 \
+	no-psk \
+	no-rc2 \
+	no-rc4 \
+	no-rc5 \
+	no-sctp \
+	no-seed \
+	no-shared \
+	no-srp \
+	no-ssl3 \
+	no-asm \
+	no-tests \
+	--prefix=/
+
+CROSS_COMPILE=`xcode-select --print-path`/Toolchains/XcodeDefault.xctoolchain/usr/bin/
+CROSS_TOP=`xcode-select --print-path`/Platforms/iPhoneOS.platform/Developer
+CROSS_SDK=iPhoneOS.sdk
+
+SIM_TOP=`xcode-select --print-path`/Platforms/iPhoneSimulator.platform/Developer
+SIM_SDK=iPhoneSimulator.sdk
+
+libopenssl: $(CONTRIB_FAT)/lib
+	@if [ -f "$(OPENSSL_PATH)/Makefile" ]; then \
+		make -sC $(OPENSSL_PATH) clean; \
+	fi
+	@cd $(OPENSSL_PATH) && ./Configure ios64-cross $(OPENSSL_FLAGS) && \
+	make -sC $(OPENSSL_PATH) \
+		BUILD=$(BUILD_AARCH64)/openssl \
+		CROSS_COMPILE=$(CROSS_COMPILE) CROSS_TOP=$(CROSS_TOP) CROSS_SDK=$(CROSS_SDK) \
+		SYSROOT=$(ARMROOT) SYSROOT_ALT=$(ARMROOT_ALT) \
+		PREFIX= DESTDIR=$(CONTRIB_AARCH64) \
+		all install_sw
+
+	@make -sC $(OPENSSL_PATH) clean
+	@cd $(OPENSSL_PATH) && ./Configure ios-arm7s-cross $(OPENSSL_FLAGS) && \
+	make -sC $(OPENSSL_PATH) \
+		BUILD=$(BUILD_ARMV7S)/openssl \
+		CROSS_COMPILE=$(CROSS_COMPILE) CROSS_TOP=$(CROSS_TOP) CROSS_SDK=$(CROSS_SDK) \
+		SYSROOT=$(ARMROOT) SYSROOT_ALT=$(ARMROOT_ALT) \
+		PREFIX= DESTDIR=$(CONTRIB_ARMV7S) \
+		all install_sw
+
+	@make -sC $(OPENSSL_PATH) clean
+	@cd $(OPENSSL_PATH) && ./Configure ios-cross $(OPENSSL_FLAGS) && \
+	make -sC $(OPENSSL_PATH) \
+		BUILD=$(BUILD_ARMV7)/openssl \
+		CROSS_COMPILE=$(CROSS_COMPILE) CROSS_TOP=$(CROSS_TOP) CROSS_SDK=$(CROSS_SDK) \
+		SYSROOT=$(ARMROOT) SYSROOT_ALT=$(ARMROOT_ALT) \
+		PREFIX= DESTDIR=$(CONTRIB_ARMV7) \
+		all install_sw
+
+	@make -sC $(OPENSSL_PATH) clean
+	@cd $(OPENSSL_PATH) && ./Configure darwin64-x86_64-cc $(OPENSSL_FLAGS) && \
+	make -sC $(OPENSSL_PATH) CC=$(CC_SIM) \
+		BUILD=$(BUILD_X86_64)/openssl \
+		CROSS_COMPILE=$(CROSS_COMPILE) CROSS_TOP=$(SIM_TOP) CROSS_SDK=$(SIM_SDK) \
+		SYSROOT=$(SIMROOT) SYSROOT_ALT=$(SIMROOT_ALT) \
+		PREFIX= DESTDIR=$(CONTRIB_X86_64) \
+		all install_sw
+
+	@rm -f $(OPENSSL_PATH)/libssl.*
+	@rm -f $(OPENSSL_PATH)/libcrypto.*
+
+	@lipo \
+		-arch arm64 $(CONTRIB_AARCH64)/lib/libssl.a \
+		-arch armv7 $(CONTRIB_ARMV7)/lib/libssl.a \
+		-arch armv7s $(CONTRIB_ARMV7S)/lib/libssl.a \
+		-arch x86_64 $(CONTRIB_X86_64)/lib/libssl.a \
+		-create -output $(CONTRIB_FAT)/lib/libssl.a
+
+
+	@lipo \
+		-arch arm64 $(CONTRIB_AARCH64)/lib/libcrypto.a \
+		-arch armv7 $(CONTRIB_ARMV7)/lib/libcrypto.a \
+		-arch armv7s $(CONTRIB_ARMV7S)/lib/libcrypto.a \
+		-arch x86_64 $(CONTRIB_X86_64)/lib/libcrypto.a \
+                -create -output $(CONTRIB_FAT)/lib/libcrypto.a
+
 #
 # libre
 #
 
 LIBRE_BUILD_FLAGS := \
-	USE_OPENSSL= USE_ZLIB= OPT_SPEED=1 USE_APPLE_COMMONCRYPTO=1
+	USE_OPENSSL=1 USE_ZLIB= OPT_SPEED=1 USE_APPLE_COMMONCRYPTO=1
 
-libre: $(CONTRIB_FAT)/lib
+libre: libopenssl
 	@rm -f $(LIBRE_PATH)/libre.*
 	@make -sC $(LIBRE_PATH) CC='$(CC_ARM)' \
 		BUILD=$(BUILD_AARCH64)/libre \
@@ -186,7 +288,6 @@ libre: $(CONTRIB_FAT)/lib
 		-arch armv7 $(CONTRIB_ARMV7)/lib/libre.a \
 		-arch armv7s $(CONTRIB_ARMV7S)/lib/libre.a \
 		-create -output $(CONTRIB_FAT)/lib/libre.a
-
 
 #
 # librem
@@ -265,7 +366,7 @@ BARESIP_BUILD_FLAGS_ARMV7S := \
 	EXTRA_MODULES='g711 audiounit avcapture opengles'
 
 
-baresip: librem libre
+baresip: librem libre libopenssl
 	@rm -f $(BARESIP_PATH)/src/static.c ../baresip/libbaresip.*
 	@make -sC $(BARESIP_PATH) CC='$(CC_ARM)' \
 		BUILD=$(BUILD_AARCH64)/baresip \

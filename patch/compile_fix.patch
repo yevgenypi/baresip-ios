@@ -1,0 +1,20 @@
+--- a/openssl/crypto/compile_fix.c	1970-01-01 01:00:00.000000000 +0100
++++ b/openssl/crypto/compile_fix.c	2020-05-12 23:02:53.000000000 +0200
+@@ -0,0 +1,17 @@
++// Functions that appear to be missing when targeting the Xcode iOS Simulators
++// These are used by the Corona SDK OpenSSL plugin</code>
++ 
++#include <dirent.h>
++#include <fnmatch.h>
++ 
++DIR * opendir$INODE64( char * dirName );
++DIR * opendir$INODE64( char * dirName )
++{
++return opendir( dirName );
++}
++ 
++struct dirent * readdir$INODE64( DIR * dir );
++struct dirent * readdir$INODE64( DIR * dir )
++{
++return readdir( dir );
++}

@@ -1,0 +1,27 @@
+--- a/15-ios.conf	2020-04-21 14:22:39.000000000 +0200
++++ b/15-ios.conf	2020-05-12 17:55:14.000000000 +0200
+@@ -21,6 +21,12 @@
+         cflags           => add("-arch armv7 -mios-version-min=6.0.0 -fno-common"),
+         perlasm_scheme   => "ios32",
+     },
++    "ios-arm7s-xcrun" => {
++        inherit_from     => [ "ios-common", asm("armv4_asm") ],
++        CC               => "xcrun -sdk iphoneos cc",
++        cflags           => add("-arch armv7s -mios-version-min=6.0.0 -fno-common"),
++        perlasm_scheme   => "ios32",
++    },
+     "ios64-xcrun" => {
+         inherit_from     => [ "ios-common", asm("aarch64_asm") ],
+         CC               => "xcrun -sdk iphoneos cc",
+@@ -54,6 +60,11 @@
+         CC               => "cc",
+         cflags           => add("-isysroot \$(CROSS_TOP)/SDKs/\$(CROSS_SDK)"),
+     },
++    "ios-arm7s-cross" => {
++        inherit_from     => [ "ios-arm7s-xcrun" ],
++        CC               => "cc",
++        cflags           => add("-isysroot \$(CROSS_TOP)/SDKs/\$(CROSS_SDK)"),
++    },
+     "ios64-cross" => {
+         inherit_from     => [ "ios64-xcrun" ],
+         CC               => "cc",

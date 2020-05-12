@@ -1,0 +1,11 @@
+--- a/rem/makefile	2020-05-12 23:45:47.000000000 +0200
++++ b/rem/Makefile	2020-05-12 23:46:06.000000000 +0200
+@@ -83,7 +83,7 @@
+ 
+ $(SHARED): $(OBJS)
+ 	@echo "  LD      $@"
+-	@$(LD) $(LFLAGS) $(SH_LFLAGS) $^ -L$(LIBRE_SO) -lre $(LIBS) -o $@
++	@$(LD) $(LFLAGS) $(SH_LFLAGS) $^ -L$(LIBRE_SO) $(LIBS) -o $@ -lre
+ 
+ 
+ $(STATIC): $(OBJS)
